@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Encarpetado - Grupo CT Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <img src="https://ct-scanner.s3.us-east-2.amazonaws.com/LOGO.png" alt="CT Scanner de México" style="max-width: 220px; margin-bottom: 25px;">
+            <p style="color: var(--text-light); margin-bottom: 20px; font-size: 14px;">Portal de Encarpetado Restringido</p>
+            
+            <div style="position: relative;">
+                <i class="fa-solid fa-user-doctor" style="position: absolute; left: 15px; top: 23px; color: #94A3B8;"></i>
+                <input type="text" id="login-user" placeholder="Usuario / Admin" autocomplete="off" style="padding-left: 40px;">
+            </div>
+            
+            <div style="position: relative;">
+                <i class="fa-solid fa-lock" style="position: absolute; left: 15px; top: 23px; color: #94A3B8;"></i>
+                <input type="password" id="login-pass" placeholder="Contraseña" style="padding-left: 40px;">
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 15px; padding: 14px; font-size: 15px;" onclick="app.login()">
+                Acceder al Sistema
+            </button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://ct-scanner.s3.us-east-2.amazonaws.com/LOGO.png" alt="CT Scanner Logo" style="max-width: 180px; margin-bottom: 20px;">
+            <div id="ui-username" style="font-size: 16px; font-weight: 700; color: var(--accent);">Usuario</div>
+            <div id="ui-rol" style="font-size: 12px; color: #64748B; margin-top: 5px;">Área Médica</div>
+        </div>
+        
+        <div class="sidebar-menu">
+            <div class="menu-label">Explorador</div>
+            <button class="btn-menu" onclick="app.abrirModal('modal-carpeta')"><i class="fa-solid fa-folder-plus"></i> Nueva carpeta</button>
+
+            <div class="menu-label" style="margin-top: 20px;">Administración</div>
+            <div id="admin-controls" style="display: none;">
+                <button class="btn-menu" onclick="app.cargarUsuariosForm()"><i class="fa-solid fa-user-nurse"></i> Alta de Usuarios</button>
+                <button class="btn-menu" onclick="app.cargarPermisosForm()"><i class="fa-solid fa-shield-virus"></i> Privilegios de Acceso</button>
+            </div>
+            
+            <div class="menu-label" style="margin-top: 20px;">Sistema</div>
+            <button class="btn-menu" onclick="app.abrirModalCambiarPassword()"><i class="fa-solid fa-key"></i> Cambiar mi Contraseña</button>
+            <button class="btn-menu danger" onclick="app.logout()"><i class="fa-solid fa-right-from-bracket"></i> Finalizar Sesion</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div>
+                <h1 style="margin: 0; font-size: 22px; color: var(--accent);">Carpetas</h1>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="position: relative;">
+                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 15px; top: 12px; color: #94A3B8;"></i>
+                    <input type="text" class="search-bar" id="search-input" placeholder="Buscar carpeta o archivo" onkeyup="app.buscarArchivos()" style="padding-left: 40px;">
+                </div>
+                <button class="btn btn-outline" onclick="app.cargarExplorador()"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
+            </div>
+        </div>
+        <div class="explorer-container" id="explorador"></div>
+    </div>
+
+    <div id="modal-preview" class="modal-overlay">
+        <div class="modal" style="width: 85%; max-width: 1000px; height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="background: #1E293B; justify-content: space-between;">
+                <span id="preview-title"><i class="fa-solid fa-file-waveform"></i> Visor Clínico</span>
+                <button onclick="app.cerrarModal('modal-preview')" style="background:none; border:none; color:white; cursor:pointer; font-size:20px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="preview-body" style="flex: 1; padding: 0; background: #e2e8f0; display: flex; flex-direction: column;">
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-carpeta" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header" style="background: var(--accent);"><i class="fa-solid fa-folder-plus"></i> Crear Carpeta</div>
+            <div class="modal-body"><input type="text" id="carpeta-nombre" placeholder="Nombre de la carpeta"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="app.cerrarModal('modal-carpeta')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.crearCarpeta()">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modal-usuario" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header" style="background: var(--accent);"><i class="fa-solid fa-user-plus"></i> Alta de Usuarios</div>
+            <div class="modal-body">
+                <input type="text" id="nuevo-usuario" placeholder="Usuario">
+                <input type="password" id="nueva-pass" placeholder="Contraseña">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="app.cerrarModal('modal-usuario')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.crearUsuario()">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-permisos" class="modal-overlay">
+        <div class="modal" style="width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="background: var(--warning);"><i class="fa-solid fa-shield"></i> Privilegios</div>
+            <div class="modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 10px;">
+                <label style="font-size: 14px; font-weight: 600; color: #475569;">Seleccionar Carpeta:</label>
+                <select id="permiso-carpeta" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%;"></select>
+                
+                <div style="position: relative; margin-top: 10px;">
+                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 10px; color: #94a3b8;"></i>
+                    <input type="text" id="buscar-usuario-permiso" placeholder="Buscar usuario..." onkeyup="app.filtrarUsuariosPermisos()" style="width: 100%; padding: 8px 10px 8px 35px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc;" id="lista-permisos">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="app.cerrarModal('modal-permisos')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.guardarPermisos()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-password" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header" style="background: var(--accent);"><i class="fa-solid fa-key"></i> Cambiar Contraseña</div>
+            <div class="modal-body">
+                <input type="password" id="old-pass-change" placeholder="Contraseña actual">
+                <input type="password" id="new-pass-change" placeholder="Nueva contraseña">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="app.cerrarModal('modal-password')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.cambiarPassword()">Actualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-reset-password" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header" style="background: var(--warning);"><i class="fa-solid fa-unlock-keyhole"></i> Resetear Contraseña</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; font-size: 14px; color: var(--text);">Usuario: <strong id="reset-pass-username"></strong></p>
+                <input type="hidden" id="reset-pass-user-id">
+                <input type="password" id="reset-pass-new" placeholder="Nueva contraseña">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="app.cerrarModal('modal-reset-password')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.resetPasswordAdmin()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-confirm" class="modal-overlay">
+        <div class="modal" style="width: 360px; text-align: center; border-top: 5px solid var(--danger);">
+            <div class="modal-body" style="padding: 35px 25px 25px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 52px; color: var(--danger); margin-bottom: 20px;"></i>
+                <h3 id="confirm-title" style="margin: 0 0 10px; color: var(--text); font-size: 20px;">¿Estás seguro?</h3>
+                <p id="confirm-message" style="color: var(--text-light); font-size: 14px; margin-bottom: 30px; line-height: 1.5;">Esta acción no se puede deshacer.</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="btn btn-outline" id="btn-confirm-cancel" style="flex: 1; justify-content: center;">Cancelar</button>
+                    <button class="btn btn-primary" id="btn-confirm-ok" style="flex: 1; justify-content: center; background: var(--danger); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
